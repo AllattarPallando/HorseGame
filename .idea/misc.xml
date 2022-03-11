@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/bg_data_bottom.xml" value="0.236" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/bg_data_bottom_contrast.xml" value="0.236" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/bg_data_top.xml" value="0.236" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/bg_data_top_contrast.xml" value="0.236" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/bg_title_bottom.xml" value="0.236" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/bg_title_top.xml" value="0.236" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/ic_share.xml" value="0.151" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/option_black.xml" value="0.1485" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/drawable/option_white.xml" value="0.1485" />
+        <entry key="..\:/ALICIA/ANDROID/HorseGame/app/src/main/res/layout/activity_main.xml" value="0.2421875" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build/classes" />
+  </component>
+  <component name="ProjectType">
+    <option name="id" value="Android" />
+  </component>
+</project>
