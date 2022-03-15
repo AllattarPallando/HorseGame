@@ -41,13 +41,11 @@ class MainActivity : AppCompatActivity() {
     private var nextLevel: Boolean = false
     private var level: Int = 1
     private var levelMoves: Int = 0
-    private var scoreLevel: Int = 1
 
     private var movesRequired: Int = 0
     private var moves: Int = 0
 
     private var lives: Int = 1
-    private var scoreLives: Int = 1
 
     private var options: Int = 0
 
@@ -309,6 +307,7 @@ class MainActivity : AppCompatActivity() {
     private fun setLevel(){
         if(nextLevel){
             level++
+            setlives()
             /*if(!premium) setLives()
             else{
                 editor.apply{
@@ -331,11 +330,8 @@ class MainActivity : AppCompatActivity() {
         var tvLiveData: TextView = findViewById(R.id.tvLiveData)
         tvLiveData.text = lives.toString()
 
-        scoreLives = lives
-
         var tvLevelNumber: TextView = findViewById(R.id.tvLevelNumber)
         tvLevelNumber.text = level.toString()
-        scoreLevel = level
 
         bonus = 0
         var tvBonusData: TextView = findViewById(R.id.tvBonusData)
@@ -366,6 +362,16 @@ class MainActivity : AppCompatActivity() {
             5-> movesRequired = 10
         }
         return movesRequired
+    }
+    private fun setlives(){
+        when(level){
+            1-> lives = 1
+            2-> lives = 4
+            3-> lives = 3
+            4-> lives = 3
+            5-> lives = 4
+
+        }
     }
 
     private fun setBoardLevel(){
@@ -488,7 +494,7 @@ class MainActivity : AppCompatActivity() {
     }
     private fun showMessage(title: String, action: String, gameOver: Boolean){
         gaming = false
-        nextLevel != gameOver
+        nextLevel = !gameOver
 
         var lyMessage: LinearLayout = findViewById(R.id.lyMessage)
         lyMessage.visibility = View.VISIBLE
