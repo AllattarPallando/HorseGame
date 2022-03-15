@@ -16,9 +16,13 @@ class MainActivity : AppCompatActivity() {
     private var cellSelected_x: Int = 0
     private var cellSelected_y: Int = 0
 
+    private var levelMoves: Int = 64
     private var movesRequired: Int = 4
     private var moves: Int = 64
     private var options: Int = 0
+    private var bonus: Int = 0
+    private var withBonus: Int = 0
+
     private var nameColorBlack: String = "black_cell"
     private var nameColorWhite: String = "white_cell"
 
@@ -99,6 +103,14 @@ class MainActivity : AppCompatActivity() {
         var tvMovesData: TextView = findViewById(R.id.tvMovesData)
         tvMovesData.text = moves.toString()
 
+        growProgressBonus()
+
+        if(board[x][y] == 2){
+            bonus++
+            var tvBonusData: TextView = findViewById(R.id.tvMovesData)
+            tvBonusData.text = " + $bonus"
+        }
+
         board[x][y] = 1
         paintHorseCell(cellSelected_x, cellSelected_y, "previous_cell")
 
@@ -115,6 +127,21 @@ class MainActivity : AppCompatActivity() {
             //checkGameOver(x,y)
         }
         //else checkSucessfulEnd()
+    }
+
+    private fun growProgressBonus(){
+        var moves_done: Int = levelMoves - moves
+        var bonus_done: Int = moves_done/movesRequired
+        var moves_rest: Int = movesRequired * (bonus_done)
+        var bonus_grow: Int = moves_done - moves_rest
+
+        var v: View = findViewById(R.id.vNewBonus)
+        var with_bonus: Float = ((withBonus/movesRequired) * bonus_grow).toFloat()
+
+        var height: Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8f, resources.displayMetrics).toInt()
+        var width: Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, with_bonus, resources.displayMetrics).toInt()
+
+        v.setLayoutParams(TableRow.LayoutParams(width, height))
     }
 
     private fun checkNewBonus(){
@@ -235,7 +262,7 @@ class MainActivity : AppCompatActivity() {
         val width_cell = (width_dp - lateralMarginsDP)/8
         val heigth_cell = width_cell
 
-
+        withBonus = 2 * width_cell.toInt()
 
         for (i in 0..7){
             for (j in 0..7){
