@@ -1,17 +1,31 @@
 package com.example.horsegame
 
+import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Point
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
 import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TableRow
-import android.widget.TextView
+import android.widget.*
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.test.runner.screenshot.ScreenCapture
+import androidx.test.runner.screenshot.Screenshot.capture
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
+import java.util.jar.Manifest
 
 class MainActivity : AppCompatActivity() {
+
+    private var bitmap: Bitmap? = null
+
+    private var mHandler: Handler? = null
+    private var timeInSeconds: Long = 0
 
     private var cellSelected_x: Int = 0
     private var cellSelected_y: Int = 0
@@ -35,8 +49,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         initScreenGame()
-        resetBoard()
-        setFirstPosition()
+        startGame()
     }
 
     private fun initScreenGame(){
@@ -73,6 +86,33 @@ class MainActivity : AppCompatActivity() {
     private fun hideMessage(){
         var lyMessage: LinearLayout = findViewById(R.id.lyMessage)
         lyMessage.visibility = View.INVISIBLE
+    }
+
+    fun launchShareGame(v: View){
+        shareGame()
+    }
+    private fun shareGame(){
+        ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
+        ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), 1)
+
+        var ssc: ScreenCapture = capture(this)
+        bitmap = ssc.bitmap
+
+        if(bitmap != null){
+            var idGame: String = SimpleDateFormat("yy/MM/dd").format(Date())
+            idGame = idGame.replace(":", "")
+            idGame = idGame.replace("/", "")
+
+            val path = saveImage(bitmap, "${idGame}.jpg")
+            val bmpUri = Uri.parse(path)
+
+            val shareIntent = Intent(Intent.ACTION_SEND)
+            shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            shareIntent.putExtra(Intent.EXTRA_STREAM, bmpUri)
+            shareIntent.putExtra(Intent.EXTRA_TEXT, stringShare)
+            shareIntent.type = "image/png"
+        }
+
     }
 
     fun checkCellClicked(v: View){
@@ -122,7 +162,7 @@ class MainActivity : AppCompatActivity() {
 
         if(board[x][y] == 2){
             bonus++
-            var tvBonusData: TextView = findViewById(R.id.tvMovesData)
+            var tvBonusData: TextView = findViewById(R.id.tvBonusData)
             tvBonusData.text = " + $bonus"
         }
 
@@ -163,6 +203,22 @@ class MainActivity : AppCompatActivity() {
             intArrayOf(0, 0, 0, 0, 0, 0, 0, 0),
             intArrayOf(0, 0, 0, 0, 0, 0, 0, 0)
         )
+    }
+    private fun clearBoard(){
+        var iv: ImageView
+
+        var colorBlack: Int = ContextCompat.getColor(this, resources.getIdentifier(nameColorBlack, "color", packageName))
+        var colorWhite: Int = ContextCompat.getColor(this, resources.getIdentifier(nameColorWhite, "color", packageName))
+
+        for(i in 0..7){
+            for(j in 0..7){
+                iv = findViewById(resources.getIdentifier("c$i$j", "id", packageName))
+                iv.setImageResource(0)
+
+                if(checkColorCell(i, j) == "black") iv.setBackgroundColor(colorBlack)
+                else iv.setBackgroundColor(colorWhite)
+            }
+        }
     }
     private fun setFirstPosition(){
         var x: Int = 0
@@ -271,6 +327,7 @@ class MainActivity : AppCompatActivity() {
         }
         else{
             score = tvTimeData.text.toString()
+            stringShare = "Let's Go!!"
         }
 
         var tvScoreMessage: TextView = findViewById(R.id.tvScoreMessage)
@@ -326,5 +383,49 @@ class MainActivity : AppCompatActivity() {
         iv.setImageResource(R.drawable.icon)
     }
 
+    private fun resetTime(){
+        mHandler?.removeCallbacks(chronometer)
+        timeInSeconds = 0
+
+        var tvTimeData: TextView = findViewById(R.id.tvTimeData)
+        tvTimeData.text = "00:00"
+    }
+    private fun startTime(){
+        mHandler = Handler(Looper.getMainLooper())
+        chronometer.run()
+    }
+    private var chronometer: Runnable = object: Runnable{
+        override fun run() {
+            try {
+                timeInSeconds++
+                updateStopWatchView(timeInSeconds)
+            } finally {
+                mHandler!!.postDelayed(this, 1000L)
+            }
+        }
+    }
+    private fun updateStopWatchView(timeInSeconds: Long){
+        val formattedTime = getFormattedStopWatch((timeInSeconds * 1000))
+        var tvTimeData: TextView = findViewById(R.id.tvTimeData)
+        tvTimeData.text = formattedTime
+    }
+    private fun getFormattedStopWatch(ms: Long) : String{
+        var milliseconds = ms
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(milliseconds)
+        milliseconds -= TimeUnit.MINUTES.toMillis(minutes)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds((milliseconds))
+
+        return "${if (minutes < 10) "0" else ""}$minutes:" +
+                "${if (seconds < 10) "0" else ""}$seconds"
+    }
+
+    private fun startGame(){
+        resetBoard()
+        clearBoard()
+        setFirstPosition()
+
+        resetTime()
+        startTime()
+    }
 
 }
