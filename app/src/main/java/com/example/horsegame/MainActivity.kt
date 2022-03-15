@@ -1,13 +1,17 @@
 package com.example.horsegame
 
+import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Point
+import android.media.MediaScannerConnection
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.util.TypedValue
 import android.view.View
 import android.widget.*
@@ -15,6 +19,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.test.runner.screenshot.ScreenCapture
 import androidx.test.runner.screenshot.Screenshot.capture
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -26,14 +32,25 @@ class MainActivity : AppCompatActivity() {
 
     private var mHandler: Handler? = null
     private var timeInSeconds: Long = 0
+    private var gaming: Boolean = true
+    private var stringShare: String = ""
 
     private var cellSelected_x: Int = 0
     private var cellSelected_y: Int = 0
 
-    private var levelMoves: Int = 64
-    private var movesRequired: Int = 4
-    private var moves: Int = 64
+    private var nextLevel: Boolean = false
+    private var level: Int = 1
+    private var levelMoves: Int = 0
+    private var scoreLevel: Int = 1
+
+    private var movesRequired: Int = 0
+    private var moves: Int = 0
+
+    private var lives: Int = 1
+    private var scoreLives: Int = 1
+
     private var options: Int = 0
+
     private var bonus: Int = 0
     private var withBonus: Int = 0
 
@@ -54,7 +71,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initScreenGame(){
         setSizeBoard()
-        hideMessage()
+        hideMessage(false)
     }
     private fun setSizeBoard(){
         var iv: ImageView
@@ -83,9 +100,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    private fun hideMessage(){
+    private fun hideMessage(start: Boolean){
         var lyMessage: LinearLayout = findViewById(R.id.lyMessage)
         lyMessage.visibility = View.INVISIBLE
+
+        if(start) startGame()
+    }
+
+    fun launchAction(v: View){
+        hideMessage(true)
     }
 
     fun launchShareGame(v: View){
@@ -111,8 +134,51 @@ class MainActivity : AppCompatActivity() {
             shareIntent.putExtra(Intent.EXTRA_STREAM, bmpUri)
             shareIntent.putExtra(Intent.EXTRA_TEXT, stringShare)
             shareIntent.type = "image/png"
+
+            val finalShareIntent = Intent.createChooser(shareIntent, "Select the app yo want to share the game to")
+            finalShareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            this.startActivity(finalShareIntent)
         }
 
+    }
+    private fun saveImage(bitmap: Bitmap?, fileName: String): String?{
+        if(bitmap == null) return  null
+
+        if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q){
+            val contentValues = ContentValues().apply{
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Screenshots")
+            }
+
+            val uri: Uri? = this.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            if(uri != null){
+                this.contentResolver.openOutputStream(uri).use{
+                    if(it == null) return@use
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 35, it)
+                    it.flush()
+                    it.close()
+
+                    //Add pic to gallery
+                    MediaScannerConnection.scanFile(this, arrayOf(uri.toString()), null, null)
+                }
+            }
+            return uri.toString()
+        }
+
+        val filePath: String = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES + "/Screenshots").absolutePath
+        val dir: File = File(filePath)
+        if(!dir.exists()) dir.mkdirs()
+        val file: File = File(dir, fileName)
+        val fOut: FileOutputStream = FileOutputStream(file)
+
+        bitmap.compress(Bitmap.CompressFormat.PNG, 85, fOut)
+        fOut.flush()
+        fOut.close()
+
+        //Add pic to gallery
+        MediaScannerConnection.scanFile(this, arrayOf(file.toString()), null, null)
+        return filePath
     }
 
     fun checkCellClicked(v: View){
@@ -176,7 +242,7 @@ class MainActivity : AppCompatActivity() {
 
         paintHorseCell(x, y, "selected_cell")
         checkMovement = true
-        checkOption(x, y)
+        checkOptions(x, y)
 
         if(moves > 0){
             checkNewBonus()
@@ -224,14 +290,121 @@ class MainActivity : AppCompatActivity() {
         var x: Int = 0
         var y: Int = 0
 
-        x = (0..7).random()
-        y = (0..7).random()
+        var firstPosition: Boolean = false
+        while(!firstPosition){
+            x = (0..7).random()
+            y = (0..7).random()
+
+            if(board[x][y] == 0) firstPosition = true
+            checkOptions(x, y)
+            if(options == 0) firstPosition = false
+        }
 
         cellSelected_x = x
         cellSelected_y = y
 
         selectCell(x, y)
     }
+
+    private fun setLevel(){
+        if(nextLevel){
+            level++
+            /*if(!premium) setLives()
+            else{
+                editor.apply{
+                    putInt("LEVEL", level!!)
+                }.apply()
+            }*/
+        }
+        //lives = level
+        else{
+            //if(!premium){
+                lives--
+                if(lives < 1){
+                    level = 1
+                    lives = 1
+                }
+            //}
+        }
+    }
+    private fun setLevelParameters(){
+        var tvLiveData: TextView = findViewById(R.id.tvLiveData)
+        tvLiveData.text = lives.toString()
+
+        scoreLives = lives
+
+        var tvLevelNumber: TextView = findViewById(R.id.tvLevelNumber)
+        tvLevelNumber.text = level.toString()
+        scoreLevel = level
+
+        bonus = 0
+        var tvBonusData: TextView = findViewById(R.id.tvBonusData)
+        tvBonusData.text = ""
+
+        setLevelMoves()
+        moves = levelMoves
+
+        movesRequired = setMovesRequired()
+    }
+    private fun setLevelMoves(){
+        when(level){
+            1-> levelMoves = 64
+            2-> levelMoves = 56
+            3-> levelMoves = 32
+            4-> levelMoves = 16
+            5-> levelMoves = 48
+        }
+    }
+    private fun setMovesRequired(): Int{
+        var movesRequired: Int = 0
+
+        when(level){
+            1-> movesRequired = 8
+            2-> movesRequired = 10
+            3-> movesRequired = 12
+            4-> movesRequired = 10
+            5-> movesRequired = 10
+        }
+        return movesRequired
+    }
+
+    private fun setBoardLevel(){
+        when(level){
+            2-> paintLevel_2()
+            3-> paintLevel_3()
+            4-> paintLevel_4()
+            5-> paintLevel_5()
+        }
+    }
+    private fun paintColumn(column: Int){
+        for(i in 0..7){
+            board[column][i] = 1
+            paintHorseCell(column, i, "previous_cell")
+        }
+    }
+    private fun paintLevel_2(){
+        paintColumn(6)
+    }
+    private fun paintLevel_3(){
+        for(i in 0..7){
+            for(j in 4..7){
+                board[j][i] = 1
+                paintHorseCell(j, i, "previous_cell")
+            }
+        }
+    }
+    private fun paintLevel_4(){
+        paintLevel_3(); paintLevel_5()
+    }
+    private fun paintLevel_5(){
+        for(i in 0..3){
+            for(j in 0..3){
+                board[j][i] = 1
+                paintHorseCell(j, i, "previous_cell")
+            }
+        }
+    }
+
 
     private fun checkNewBonus(){
         if(moves % movesRequired == 0){
@@ -314,6 +487,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun showMessage(title: String, action: String, gameOver: Boolean){
+        gaming = false
+        nextLevel != gameOver
+
         var lyMessage: LinearLayout = findViewById(R.id.lyMessage)
         lyMessage.visibility = View.VISIBLE
 
@@ -324,10 +500,11 @@ class MainActivity : AppCompatActivity() {
         var score: String = ""
         if(gameOver){
             score = "Score: " + (levelMoves-moves) + "/" + levelMoves
+            stringShare = "This game makes me sick!!" + score +" http://jotajotavm.com/retocaballo"
         }
         else{
             score = tvTimeData.text.toString()
-            stringShare = "Let's Go!!"
+            stringShare = "Let's Go!! New challenge completed. Level: $level (" + score +") http://jotajotavm.com/retocaballo"
         }
 
         var tvScoreMessage: TextView = findViewById(R.id.tvScoreMessage)
@@ -337,7 +514,7 @@ class MainActivity : AppCompatActivity() {
         tvAction.text = action
     }
 
-    private fun checkOption(x: Int, y: Int){
+    private fun checkOptions(x: Int, y: Int){
         options = 0
 
         checkMove(x, y, 1, 2) // check move right - top long
@@ -397,8 +574,10 @@ class MainActivity : AppCompatActivity() {
     private var chronometer: Runnable = object: Runnable{
         override fun run() {
             try {
-                timeInSeconds++
-                updateStopWatchView(timeInSeconds)
+                if(gaming){
+                    timeInSeconds++
+                    updateStopWatchView(timeInSeconds)
+                }
             } finally {
                 mHandler!!.postDelayed(this, 1000L)
             }
@@ -420,12 +599,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startGame(){
+        setLevel()
+        setLevelParameters()
+
         resetBoard()
         clearBoard()
+
+        setBoardLevel()
         setFirstPosition()
 
         resetTime()
         startTime()
+        gaming = true
     }
 
 }
